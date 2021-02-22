@@ -1,6 +1,6 @@
 // const url = `ws://localhost:8000`;
-// const url = `ws://ancient-waters-74708.herokuapp.com:8000`;
-const url = `ws://localhost:3000`;
+const url = `ws://ancient-waters-74708.herokuapp.com:5000`;
+// const url = `ws://localhost:3000`;
 const ws = new WebSocket(url);
 window.username = Math.floor(Math.random() * 1000);
 
