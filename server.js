@@ -1,4 +1,6 @@
 const WebSocket = require('ws');
+const express = require('express');
+const app = express();
 const wss = new WebSocket.Server({port: 8000});
 
 wss.on('connection', function connection (ws){
@@ -11,3 +13,12 @@ wss.on('connection', function connection (ws){
     });
     console.log(`new user connected`);
 });
+
+app.use(express.static(__dirname));
+app.get('/', (req, res) => {
+    res.sendFile('index.html', {
+        root: __dirname
+    });
+});
+
+app.listen(3000);
