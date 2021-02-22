@@ -1,7 +1,8 @@
 const WebSocket = require('ws');
 const express = require('express');
 const app = express();
-const wss = new WebSocket.Server({port: 8000});
+const server = app.listen(process.env.PORT || 3000);
+const wss = new WebSocket.Server({ server });
 
 wss.on('connection', function connection (ws){
     ws.on('message', function message(data){
@@ -20,5 +21,3 @@ app.get('/', (req, res) => {
         root: __dirname
     });
 });
-
-app.listen(3000);
