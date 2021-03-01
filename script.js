@@ -1,6 +1,4 @@
-// const url = `ws://localhost:8000`;
-const url = `wss://ancient-waters-74708.herokuapp.com:5000`;
-// const url = `ws://localhost:3000`;
+const url = `ws://${window.location.hostname}:3000`;
 const ws = new WebSocket(url);
 window.username = Math.floor(Math.random() * 1000);
 
@@ -39,7 +37,16 @@ ws.onopen = function (event){
     });
     
     ws.onmessage = function (event){
-        show_message(JSON.parse(event.data));
+        const message = JSON.parse(event.data);
+        
+        switch(message['type']){
+            case 'USER_COUNT':
+                update_user_counter(message['count']);
+                break;
+            case 'USER_MESSAGE':
+                show_message(message['message']);
+                break;
+        }
     }
     
     function show_message(data){
@@ -60,5 +67,9 @@ ws.onopen = function (event){
         chat_box.append(div_message);
 
         chat_box.scrollTo(0, chat_box.scrollHeight);
+    }
+
+    function update_user_counter(count){
+        document.getElementById('counter').innerText = count;
     }
 }
