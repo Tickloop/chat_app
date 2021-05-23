@@ -1,8 +1,11 @@
 const WebSocket = require('ws');
 const express = require('express');
 const app = express();
-const server = app.listen(process.env.PORT || 3000);
+const server = app.listen(process.env.PORT || 5000);
 const wss = new WebSocket.Server({ server });
+const SEND_FILE_OPTIONS = {
+    root: __dirname + "/public/"
+};
 
 wss.on('connection', function connection (ws){
     ws.on('message', function message(data){
@@ -34,9 +37,7 @@ function updateLiveCount(client){
     }
 }
 
-app.use(express.static(__dirname));
+app.use(express.static(__dirname + "/public/"));
 app.get('/', (req, res) => {
-    res.sendFile('index.html', {
-        root: __dirname
-    });
+    res.sendFile('index.html', SEND_FILE_OPTIONS);
 });
