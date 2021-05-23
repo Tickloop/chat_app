@@ -1,4 +1,4 @@
-const url = `ws://${window.location.hostname}:5000`;
+const url = `wss://${window.location.hostname}:5000`;
 const ws = new WebSocket(url);
 window.username = Math.floor(Math.random() * 1000);
 
