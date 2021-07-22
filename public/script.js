@@ -1,9 +1,8 @@
-const room_id = window.location.href.match(/[A-Z0-9]{5}/)[0];
-const url = window.location.origin.replace(/^http/, 'ws') + '/rooms/' + room_id;
+const url = window.location.origin.replace(/^http/, 'ws');
 const ws = new WebSocket(url);
 window.username = Math.floor(Math.random() * 1000);
 
-ws.onopen = function (){
+ws.onopen = function (event){
     function send_message (msg){
         let username = document.getElementById('username').value.trim();
     
@@ -12,8 +11,6 @@ ws.onopen = function (){
         }
     
         const data = {
-            type: 'USER_MESSAGE',
-            room: room_id,
             message: msg,
             username: username
         }
