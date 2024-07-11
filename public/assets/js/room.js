@@ -1,6 +1,7 @@
 const roomID = window.location.href.match(/[A-Z0-9]{5}/)[0];
 const webSocketURL = window.location.origin.replace(/^http/, 'ws') + '/rooms/' + roomID;
 const ws = new WebSocket(webSocketURL);
+const HISTORY = [];
 window.username = Math.floor(Math.random() * 1000);
 
 const msg_box = document.getElementById('msg_box');
@@ -27,9 +28,13 @@ function handleOnMessage(data) {
     decryptMessage(data.message)
     .then(msg => {
         data.message = msg
+    })
+    .catch(err => {
+        data.message = data.message.reduce((acc, e) => acc + e.toString(36), '')
+    })
+    .finally(msg => {
         updateMessage(data)
     })
-    .catch(err => console.log(err))
 }
 
 function sendMessage (msg){
@@ -81,6 +86,9 @@ function getChatHistory() {
         .then(data => JSON.parse(data))
         .then(data => {
             data.forEach(msg => {
+                let temp = {}
+                Object.assign(temp, msg)
+                HISTORY.push(temp)
                 handleOnMessage(msg)
             });
         })
@@ -177,17 +185,27 @@ function decryptMessage(msg) {
             key,
             msg_buff
         ).then(msg => new TextDecoder().decode(msg))
-        .catch(err => {
-            return msg.reduce((acc, e) => acc + e.toString(36), '')
-        })
     })
 }
 
-// window.crypto.subtle.generateKey(
-//     {
-//         name: "AES-CTR",
-//         length: 256
-//     },
-//     true,
-//     ["encrypt", "decrypt"]
-// ).then(key => { window.aes_key = key })
+const decrypt_btn = document.getElementById('decrypt_btn')
+decrypt_btn.addEventListener('click', (e) => {
+    let chat_box = document.getElementById('chat_box');
+    chat_box.innerHTML = ''
+
+    HISTORY.forEach(msg => {
+        handleOnMessage(msg)
+    })
+})
+
+const encrypt_btn = document.getElementById('encrypt_btn')
+decrypt_btn.addEventListener('click', (e) => {
+    let chat_box = document.getElementById('chat_box');
+    chat_box.innerHTML = ''
+
+    HISTORY.forEach(msg => {
+        encryptMessage(msg)
+        .then(msg => {
+        })
+    })
+})

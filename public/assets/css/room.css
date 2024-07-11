@@ -46,7 +46,7 @@ body{
     color: #000000;
 }
 
-#send_btn, #decrypt_btn {
+#send_btn, #decrypt_btn, #encrypt_btn {
     flex-grow: 1;
     color: #000000;
     border-radius: 5px;
