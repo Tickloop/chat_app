@@ -7,7 +7,9 @@ const msg_box = document.getElementById('msg_box');
 msg_box.addEventListener('keydown', (e) => {
     const msg = msg_box.value.trim();
     if(e.key === 'Enter' && msg !== ''){
-        sendMessage(msg);
+        encryptMessage(msg)
+        .then(msg => sendMessage(msg))
+        .catch(err => console.log(err))
     }
 });
 
@@ -15,9 +17,20 @@ const send_btn = document.getElementById('send_btn');
 send_btn.addEventListener('click', (e) => {
     const msg = msg_box.value.trim();
     if(msg !== ''){
-        sendMessage(msg);
+        encryptMessage(msg)
+        .then(msg => sendMessage(msg))
+        .catch(err => console.log(err))
     }
 });
+
+function handleOnMessage(data) {
+    decryptMessage(data.message)
+    .then(msg => {
+        data.message = msg
+        updateMessage(data)
+    })
+    .catch(err => console.log(err))
+}
 
 function sendMessage (msg){
     let username = document.getElementById('username').value.trim();
@@ -29,7 +42,7 @@ function sendMessage (msg){
     const data = {
         type: 'USER_MESSAGE',
         room: roomID,
-        message: msg,
+        message: Array.from(new Uint8Array(msg)),
         username: username
     }
     ws.send(JSON.stringify(data));
@@ -68,7 +81,7 @@ function getChatHistory() {
         .then(data => JSON.parse(data))
         .then(data => {
             data.forEach(msg => {
-                updateMessage(msg)
+                handleOnMessage(msg)
             });
         })
         .catch(err => console.log(err))
@@ -76,7 +89,7 @@ function getChatHistory() {
 
 ws.onopen = function (){
     getChatHistory()
-    
+
     ws.onmessage = function (event){
         const message = JSON.parse(event.data);
         
@@ -85,8 +98,96 @@ ws.onopen = function (){
                 updateUserCount(message['count']);
                 break;
             case 'USER_MESSAGE':
-                updateMessage(message['message']);
+                handleOnMessage(message['message']);
                 break;
         }
     }
 }
+
+function getKeyMaterial() {
+    let password = document.getElementById('secret_key').value;
+    let enc = new TextEncoder();
+    return window.crypto.subtle.importKey(
+        "raw", 
+        enc.encode(password), 
+        {name: "PBKDF2"}, 
+        false, 
+        ["deriveBits", "deriveKey"]
+    );
+}
+
+  /*
+  Given some key material and some random salt
+  derive an AES-GCM key using PBKDF2.
+  */
+function getKey() {
+    let salt = generateRandom(16)
+    return getKeyMaterial().then(keyMaterial => {
+        return window.crypto.subtle.deriveKey(
+            {
+            "name": "PBKDF2",
+            salt: salt, 
+            "iterations": 100000,
+            "hash": "SHA-256"
+            },
+            keyMaterial,
+            { "name": "AES-GCM", "length": 256},
+            true,
+            [ "encrypt", "decrypt" ]
+        );
+    })    
+}
+
+function generateRandom(n) {
+    let secret_key = document.getElementById('secret_key').value;
+    let iv = new Uint8Array(n);
+    for(let i = 0 ; i < n ; i++) {
+        iv[i] = secret_key.charCodeAt(i)
+    }
+    return iv;
+}
+
+function encryptMessage(msg) {
+    return getKey()
+    .then(key => {
+        let iv = generateRandom(12)
+        let encoded = new TextEncoder().encode(msg);
+    
+        return window.crypto.subtle.encrypt(
+            {
+              name: "AES-GCM",
+              iv: iv
+            },
+            key,
+            encoded
+        ).catch(err => console.log(err))
+    })
+}
+
+function decryptMessage(msg) {
+    return getKey()
+    .then(key => {
+        let msg_buff = new Uint8Array(msg).buffer;
+        let iv = generateRandom(12)
+        return window.crypto.subtle.decrypt(
+            {
+              name: "AES-GCM",
+              iv: iv
+            },
+            key,
+            msg_buff
+        ).then(msg => new TextDecoder().decode(msg))
+        .catch(err => {
+            return msg.reduce((acc, e) => acc + e.toString(36), '')
+        })
+    })
+}
+
+// window.crypto.subtle.generateKey(
+//     {
+//         name: "AES-CTR",
+//         length: 256
+//     },
+//     true,
+//     ["encrypt", "decrypt"]
+// ).then(key => { window.aes_key = key })

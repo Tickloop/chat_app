@@ -27,18 +27,23 @@ app.post('/rooms/:id', (req, res) => {
     const room_id = req.params.id
     fs.readFile(`./logs/msg/${room_id}.jsonl`, (err, data) => {
         if (err) {
-            logger.error("Error reading for msg log: ", err.message, " path: ", err.path)
+            logger.error(err)
             res.send(JSON.stringify([]))
             return
         }
-        data = data.toString().trim().split('\n').map(e => JSON.parse(e))
+        data = data.toString().trim()
+        if (data == '') {
+            res.send(JSON.stringify([]))
+            return
+        }
+        
+        data = data.split('\n').map(e => JSON.parse(e))
         res.send(JSON.stringify(data))
     })
 })
 
 const server = app.listen(process.env.PORT || 3000)
 const wss = new WebSocket.Server({ server: server })
-
 const ROOMS = []
 
 function updateLiveCount(clients, room){
@@ -55,7 +60,7 @@ function updateLiveCount(clients, room){
 function handleOnMessage(data) {
     const ROOM_ID = this.room_id
     fs.appendFile(`./logs/msg/${ROOM_ID}.jsonl`, data + '\n', { flag: 'a' }, err => {
-        if(err) logger.error("Error persisting message: ", err, "data: ", data)
+        if(err) logger.error(err)
     })
     data = JSON.parse(data)
     
