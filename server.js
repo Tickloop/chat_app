@@ -12,18 +12,28 @@ app.get('/', (req, res) => {
 })
 
 app.get('/rooms/:id', (req, res) => {
-    function checkRoomCode(code){
-        const rxp = /[A-Z0-9]{5}/
-        const matches = code.match(rxp)
-        return matches !== null && matches.length == 1 && matches[0] == code
-    }
-
-    if(!checkRoomCode(req.params.id)){
+    const code = req.params.id
+    const rxp = /[A-Z0-9]{5}/
+    const matches = code.match(rxp)
+    if(!(matches !== null && matches.length == 1 && matches[0] == code)){
         res.redirect('/')
     }
     
     //id is the room id of the current room
     res.sendFile(HTML_PATH + 'room.html')
+})
+
+app.post('/rooms/:id', (req, res) => {
+    const room_id = req.params.id
+    fs.readFile(`./logs/msg/${room_id}.jsonl`, (err, data) => {
+        if (err) {
+            logger.error("Error reading for msg log: ", err.message, " path: ", err.path)
+            res.send(JSON.stringify([]))
+            return
+        }
+        data = data.toString().trim().split('\n').map(e => JSON.parse(e))
+        res.send(JSON.stringify(data))
+    })
 })
 
 const server = app.listen(process.env.PORT || 3000)
@@ -45,7 +55,7 @@ function updateLiveCount(clients, room){
 function handleOnMessage(data) {
     const ROOM_ID = this.room_id
     fs.appendFile(`./logs/msg/${ROOM_ID}.jsonl`, data + '\n', { flag: 'a' }, err => {
-        if(err) logger.error("Error persisting message: ", data)
+        if(err) logger.error("Error persisting message: ", err, "data: ", data)
     })
     data = JSON.parse(data)
     
@@ -66,7 +76,7 @@ function handleOnClose (close) {
     logger.info(`user disconnected from room: ${ROOM_ID}. total users in room: ${ROOMS[ROOM_ID]}. total users: ${wss.clients.size}`)
 }
 
-wss.on('connection', function connection (ws, req){
+function handleOnConnect (ws, req){
     //the id of the room where the connection was made
     const match = req.url.match(/[A-Z0-9]{5}/)
     
@@ -74,22 +84,24 @@ wss.on('connection', function connection (ws, req){
     if(match === undefined && match.length !== 1){
         ws.close()
     }
-    const room_id = match[0]
+    const ROOM_ID = match[0]
 
     //assigning the room_id to that connection
-    ws.room_id = room_id
+    ws.room_id = ROOM_ID
 
     //updating the number of connections in each room
-    if(room_id in ROOMS){
-        ROOMS[room_id] += 1
+    if(ROOM_ID in ROOMS){
+        ROOMS[ROOM_ID] += 1
     }else{
-        ROOMS[room_id] = 1
+        ROOMS[ROOM_ID] = 1
     }
-        
+    
     ws.on('message', handleOnMessage)
     ws.on('close', handleOnClose)
     
-    logger.info(`new user connected to room: ${room_id}. total users in room: ${ROOMS[room_id]}. total users: ${wss.clients.size}`)
-    updateLiveCount(wss.clients, room_id)
-})
+    logger.info(`new user connected to room: ${ROOM_ID}. total users in room: ${ROOMS[ROOM_ID]}. total users: ${wss.clients.size}`)
+    updateLiveCount(wss.clients, ROOM_ID)
+}
+
+wss.on('connection', handleOnConnect)
 
